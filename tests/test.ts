@@ -5,7 +5,7 @@ async function main() {
     // console.log(x);
     // await stopServer(x?.id);
     
-    await terminateServer("i-0761ca5ba5293b444");
+    await terminateServer("i-05ea24e9cca6e2c87");
     console.log("Done.")
 }
 

@@ -1,4 +1,4 @@
-import { EC2Client, RunInstancesCommand, _InstanceType, AllocateAddressCommand, AssociateAddressCommand, waitUntilInstanceStatusOk, StopInstancesCommand, StartInstancesCommand, TerminateInstancesCommand } from "@aws-sdk/client-ec2";
+import { EC2Client, RunInstancesCommand, _InstanceType, AllocateAddressCommand, AssociateAddressCommand, waitUntilInstanceStatusOk, StopInstancesCommand, StartInstancesCommand, TerminateInstancesCommand, CreateSecurityGroupCommand, AuthorizeSecurityGroupIngressCommand, ReleaseAddressCommand, DescribeAddressesCommand } from "@aws-sdk/client-ec2";
 const REGION = "us-west-2";
 const client = new EC2Client({ region: REGION });
 
@@ -11,25 +11,62 @@ dotenv.config()
 
 // Create server function
 export const createServer = async (playerCount: number): Promise<server> => {
+
+  if (playerCount < 1) {
+    throw new RangeError("Player count must be at least 1.");
+  }
+
   let instanceID: string;
   let instanceIP: string;
   let InstanceType: _InstanceType;
   let savedAllocationID: string;
-
-  InstanceType = "c5.large";
-  // if (playerCount < 10) {
-  //   InstanceType = "c7g.medium";
-  // } else if (playerCount < 15) {
-  //   InstanceType = "c7g.large";
-  // } else {
-  //   InstanceType = "c7g.xlarge";
-  // }
+  let sgroupID: string;
 
   const serverPromise = new Promise<server>(async (resolve, reject) => {
+
+    // Create new security group
+    const createSecurityGroupCommand = new CreateSecurityGroupCommand({
+      GroupName: "Minecraft",
+      Description: "SG that alligns with MC server network policies.",
+    });
+
+    try {
+      const { GroupId } = await client.send(createSecurityGroupCommand);
+      sgroupID = GroupId || '';
+
+      const ingressCommand = new AuthorizeSecurityGroupIngressCommand({
+        GroupId: sgroupID,
+        IpPermissions: [
+          {
+            IpProtocol: "tcp",
+            FromPort: 25565,
+            ToPort: 25565,
+            IpRanges: [{ CidrIp: "0.0.0.0/0" }],
+          },
+        ],
+      });
+
+      try {
+        await client.send(ingressCommand);
+      } catch (err) {
+        console.error(err);
+      }
+
+    } catch (err) { }
+
+    InstanceType = "c5.large";
+    // if (playerCount < 10) {
+    //   InstanceType = "c7g.medium";
+    // } else if (playerCount < 15) {
+    //   InstanceType = "c7g.large";
+    // } else {
+    //   InstanceType = "c7g.xlarge";
+    // }
+
+
     // Launch server
     const createCommand = new RunInstancesCommand({
-      //TODO: Don't hard-code security groups
-      SecurityGroupIds: ["sg-019c724420048c0cd"],
+      SecurityGroups: ["Minecraft"],
       ImageId: "ami-0ae49954dfb447966",
       InstanceType,
       MinCount: 1,
@@ -39,12 +76,10 @@ export const createServer = async (playerCount: number): Promise<server> => {
 
     try {
       const response = await client.send(createCommand);
-      console.log(response);
       instanceID = response.Instances?.[0]?.InstanceId || ''
       if (instanceID == '') {
         reject("AWS returned an incorect value.")
       }
-      console.log()
     } catch (err) {
       console.error(err);
       reject("AWS call failed.")
@@ -145,6 +180,35 @@ export const rebootServer = async (instanceId: string) => {
 
 export const terminateServer = async (instanceId: string) => {
   const serverPromise = new Promise<void>(async (resolve, reject) => {
+    // Get association ID
+    let associationID: string;
+    let allocationID = '';
+    const DescCommand = new DescribeAddressesCommand({});
+
+    try {
+      const { Addresses } = await client.send(DescCommand);
+      Addresses?.forEach((ele) => {
+        if (ele.InstanceId == instanceId) {
+          associationID = ele.AssociationId || '';
+          allocationID = ele.AllocationId || '';
+        }
+      })
+    } catch (err) {
+      console.error(err);
+    }
+
+    if (allocationID != '') {
+      // Release IP
+      const IpCommand = new ReleaseAddressCommand({
+        AllocationId: allocationID,
+      });
+
+      try {
+        await client.send(IpCommand);
+      } catch (err) {
+        console.error(err);
+      }
+    }
     // Terminate server
     const command = new TerminateInstancesCommand({
       InstanceIds: [instanceId],
@@ -161,7 +225,3 @@ export const terminateServer = async (instanceId: string) => {
 
   return serverPromise;
 }
-
-
-
-//TODO: Add some lookup function
