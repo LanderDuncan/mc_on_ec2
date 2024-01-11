@@ -94,22 +94,18 @@ export const createServer = async (playerCount: number): Promise<server> => {
 
 
 
-export const stopServer = async (InstanceIds): Promise<void> => {
+export const stopServer = async (instanceId: string): Promise<void> => {
   const serverPromise = new Promise<void>(async (resolve, reject) => {
     const command = new StopInstancesCommand({
-      // Use DescribeInstancesCommand to find InstanceIds
-      InstanceIds: ["INSTANCE_ID"],
+      InstanceIds: [instanceId],
     });
 
     try {
-      const { StoppingInstances } = await client.send(command);
-      const instanceIdList = StoppingInstances?.map(
-        (instance) => ` • ${instance.InstanceId}`,
-      );
-      console.log("Stopping instances:");
-      console.log(instanceIdList?.join("\n"));
+      await client.send(command);
+      resolve();
     } catch (err) {
       console.error(err);
+      reject("An error occured with the AWS call.")
     }
   });
   return serverPromise;
@@ -117,55 +113,49 @@ export const stopServer = async (InstanceIds): Promise<void> => {
 
 
 
-export const startServer = (InstanceIds): Promise<void> => {
+export const startServer = (instanceId: string): Promise<void> => {
   const serverPromise = new Promise<void>(async (resolve, reject) => {
     const command = new StartInstancesCommand({
-      // Use DescribeInstancesCommand to find InstanceIds
-      InstanceIds: ["INSTANCE_ID"],
+      InstanceIds: [instanceId],
     });
 
     try {
-      const { StartingInstances } = await client.send(command);
-      const instanceIdList = StartingInstances?.map(
-        (instance) => ` • ${instance.InstanceId}`,
-      );
-      console.log("Starting instances:");
-      console.log(instanceIdList?.join("\n"));
+      await client.send(command);
+      resolve();
     } catch (err) {
       console.error(err);
+      reject("An error occured with the AWS call.")
     }
-  })
+  });
   return serverPromise;
 }
 
 
 
-export const rebootServer = async (InstanceIds) => {
+export const rebootServer = async (instanceId: string) => {
 
   const serverPromise = new Promise<void>(async (resolve, reject) => {
-    await stopServer(InstanceIds);
-    await startServer(InstanceIds);
+    await stopServer(instanceId);
+    await startServer(instanceId);
+    resolve();
   })
 
   return serverPromise;
 }
 
-export const terminateServer = async (InstanceIds) => {
+export const terminateServer = async (instanceId: string) => {
   const serverPromise = new Promise<void>(async (resolve, reject) => {
     // Terminate server
     const command = new TerminateInstancesCommand({
-      InstanceIds: ["INSTANCE_ID"],
+      InstanceIds: [instanceId],
     });
 
     try {
-      const { TerminatingInstances } = await client.send(command);
-      const instanceList = TerminatingInstances?.map(
-        (instance) => ` • ${instance.InstanceId}`,
-      );
-      console.log("Terminating instances:");
-      console.log(instanceList?.join("\n"));
+      await client.send(command);
+      resolve();
     } catch (err) {
       console.error(err);
+      reject("An error occured with the AWS call.")
     }
   })
 

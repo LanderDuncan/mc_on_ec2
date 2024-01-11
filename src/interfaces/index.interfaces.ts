@@ -1,4 +1,4 @@
 export interface server {
-    'id': String,
-     'ip': String;
+    'id': string,
+     'ip': string;
 }
