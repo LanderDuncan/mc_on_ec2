@@ -1,11 +1,13 @@
-import {createServer,startServer,stopServer,terminateServer} from '../src/index';
+import {createServer,startServer,stopServer,terminateServer,rebootServer} from '../src';
 
 async function main() {
     // const x= await createServer(1);
     // console.log(x);
-    // await stopServer(x?.id);
+    // await stopServer("");
+    // await startServer("");
+    // await rebootServer("")
     
-    await terminateServer("i-05ea24e9cca6e2c87");
+    await terminateServer("");
     console.log("Done.")
 }
 
