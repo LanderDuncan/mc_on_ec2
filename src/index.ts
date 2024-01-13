@@ -1,4 +1,4 @@
-import { EC2Client, RunInstancesCommand, _InstanceType, AllocateAddressCommand, AssociateAddressCommand, waitUntilInstanceStatusOk, StopInstancesCommand, StartInstancesCommand, TerminateInstancesCommand, CreateSecurityGroupCommand, AuthorizeSecurityGroupIngressCommand, ReleaseAddressCommand, DescribeAddressesCommand } from "@aws-sdk/client-ec2";
+import { EC2Client, RunInstancesCommand, _InstanceType, AllocateAddressCommand, AssociateAddressCommand, waitUntilInstanceStatusOk, StopInstancesCommand, StartInstancesCommand, TerminateInstancesCommand, CreateSecurityGroupCommand, AuthorizeSecurityGroupIngressCommand, ReleaseAddressCommand, DescribeAddressesCommand, RebootInstancesCommand } from "@aws-sdk/client-ec2";
 const REGION = "us-west-2";
 const client = new EC2Client({ region: REGION });
 
@@ -126,14 +126,18 @@ export const startServer = (instanceId: string): Promise<void> => {
   return serverPromise;
 }
 
-// TODO: Switch to actual API endpoint
+
 export const rebootServer = async (instanceId: string) => {
 
   const serverPromise = new Promise<void>((resolve, reject) => {
-    stopServer(instanceId)
-      .then(() => { return startServer(instanceId) })
+    const rebootCommand = new RebootInstancesCommand({
+      InstanceIds: [instanceId],
+    });
+
+    client.send(rebootCommand)
       .then(() => resolve())
       .catch((err) => reject(err));
+
   })
 
   return serverPromise;
@@ -158,7 +162,7 @@ export const terminateServer = async (instanceId: string) => {
         const releaseIPCommand = new ReleaseAddressCommand({
           AllocationId: allocationID,
         });
-    
+
         return client.send(releaseIPCommand);
       })
       .then(() => {
