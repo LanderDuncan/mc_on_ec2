@@ -1,7 +1,7 @@
 # mc_on_ec2
 
 ## Overview
-mc_on_ec2 is a promise-based wrapper for the AWS V3 Javascript SDK that makes it easy to manage Minecraft servers. This module was written in typescript and includes a bash script to configure the Minecraft server and restart it when the instance boots.
+mc_on_ec2 is a promise-based wrapper for the AWS V3 Javascript SDK that makes it easy to manage Minecraft servers. This module was written in typescript and includes a bash script to configure the Minecraft server and restart it when the instance boots. All resources are deployed in the west-2 region.
 ### Features
 API includes functions that allow you to:
 * [Launch](#launching)
