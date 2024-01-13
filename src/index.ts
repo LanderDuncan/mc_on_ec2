@@ -127,7 +127,7 @@ export const startServer = (instanceId: string): Promise<void> => {
 }
 
 
-export const rebootServer = async (instanceId: string) => {
+export const rebootServer = async (instanceId: string): Promise<void> => {
 
   const serverPromise = new Promise<void>((resolve, reject) => {
     const rebootCommand = new RebootInstancesCommand({

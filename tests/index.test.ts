@@ -12,3 +12,8 @@
 // }
 
 // main();
+
+import { stopServer } from '../src/index';
+
+stopServer("i-055436dd2e0938fcc")
+.catch((error)=> console.log(error)); // May reject if the user has not followed AWS authentication
