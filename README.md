@@ -17,8 +17,8 @@ To install through NPM, run the following command:
 npm i mc_on_ec2
 ```
 To use this package you must be authenticated with AWS. Follow [this link](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/setting-credentials-node.html) for the latest best practices.
-## API
-### Launch
+# API
+## Launch
 ```Typescript
 createServer(playerCount: number): Promise<server>
 ```
@@ -43,7 +43,7 @@ createServer(5)
 .catch((error)=> console.log(error)); // May be rejected if the user has not completed AWS authentication procedures.
 ```
 
-### Stop
+## Stop
 ```Typescript
 stopServer(instanceID: string): Promise<void>
 ```
@@ -60,7 +60,7 @@ stopServer("i-example")
 .catch((error)=> console.log(error)); // May be rejected if the user has not followed AWS authentication procedures.
 ```
 
-### Start
+## Start
 ```Typescript
 startServer(instanceID: string): Promise<void>
 ```
@@ -77,7 +77,7 @@ startServer("i-example")
 .catch((error)=> console.log(error)); // May be rejected if the user has not followed AWS authentication procedures.
 ```
 
-### Reboot
+## Reboot
 ```Typescript
 rebootServer(instanceID: string): Promise<void>
 ```
@@ -94,7 +94,7 @@ rebootServer("i-example")
 .catch((error)=> console.log(error)); // May be rejected if the user has not followed AWS authentication procedures.
 ```
 
-### Terminate
+## Terminate
 ```Typescript
 terminateServer(instanceID: string): Promise<void>
 ```

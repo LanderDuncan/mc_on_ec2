@@ -15,13 +15,9 @@ import {
   RebootInstancesCommand,
   waitUntilInstanceStopped,
 } from "@aws-sdk/client-ec2";
-import { type server } from "./interfaces/index.interfaces";
-import dotenv from "dotenv";
+import { type server } from "./interfaces/index.interfaces.js";
 const REGION = "us-west-2";
 const client = new EC2Client({ region: REGION });
-
-// TODO: remove
-dotenv.config();
 
 /**
  * Function to launch an EC2 instance that is running a Minecraft server. It can be accessed through the returned IP address.
@@ -67,7 +63,7 @@ export const createServer = async (playerCount: number): Promise<server> => {
             },
           ],
         });
-        return await client.send(ingressCommand);
+        return client.send(ingressCommand);
       })
       .catch(() => {})
       .then(async () => {
@@ -80,11 +76,11 @@ export const createServer = async (playerCount: number): Promise<server> => {
           UserData:
             "IyEvYmluL2Jhc2gKc3VkbyB5dW0gaW5zdGFsbCBqYXZhLTE3LWFtYXpvbi1jb3JyZXR0by1oZWFkbGVzcyAteQp3Z2V0IGh0dHBzOi8vcGlzdG9uLWRhdGEubW9qYW5nLmNvbS92MS9vYmplY3RzLzhkZDFhMjgwMTVmNTFiMTgwMzIxMzg5MmI1MGI3YjRmYzc2ZTU5NGQvc2VydmVyLmphcgpqYXZhIC1YbXgxMDI0TSAtWG1zMTAyNE0gLWphciBzZXJ2ZXIuamFyIG5vZ3VpCnNlZCAnMyBjXCBldWxhPXRydWUnIGV1bGEudHh0IC1pCmVjaG8gLWUgJyMhL2Jpbi9iYXNoXG5qYXZhIC1YbXgxMDI0TSAtWG1zMTAyNE0gLWphciBzZXJ2ZXIuamFyIG5vZ3VpJyB8IHN1ZG8gdGVlIC9ldGMvcmMuZC9yYy5sb2NhbCA+IC9kZXYvbnVsbApzdWRvIGNobW9kICt4IC9ldGMvcmMuZC9yYy5sb2NhbApqYXZhIC1YbXgxMDI0TSAtWG1zMTAyNE0gLWphciBzZXJ2ZXIuamFyIG5vZ3Vp",
         });
-        return await client.send(createCommand);
+        return client.send(createCommand);
       })
       .then(async (result) => {
         instanceID = result.Instances?.[0]?.InstanceId ?? "";
-        return await waitUntilInstanceStatusOk(
+        return waitUntilInstanceStatusOk(
           {
             client,
             maxWaitTime: 1000,
@@ -94,7 +90,7 @@ export const createServer = async (playerCount: number): Promise<server> => {
       })
       .then(async () => {
         const allocateCommand = new AllocateAddressCommand({});
-        return await client.send(allocateCommand);
+        return client.send(allocateCommand);
       })
       .then(async (result) => {
         const associateCommand = new AssociateAddressCommand({
@@ -102,7 +98,7 @@ export const createServer = async (playerCount: number): Promise<server> => {
           InstanceId: instanceID,
         });
         instanceIP = result.PublicIp ?? "";
-        return await client.send(associateCommand);
+        return client.send(associateCommand);
       })
       .then(() => {
         resolve({ id: instanceID, ip: instanceIP });
@@ -127,7 +123,7 @@ export const stopServer = async (instanceID: string): Promise<void> => {
     client
       .send(stopCommand)
       .then(async () => {
-        return await waitUntilInstanceStopped(
+        return waitUntilInstanceStopped(
           {
             client,
             maxWaitTime: 1000,
@@ -158,7 +154,7 @@ export const startServer = async (instanceID: string): Promise<void> => {
     client
       .send(startCommand)
       .then(async () => {
-        return await waitUntilInstanceStatusOk(
+        return waitUntilInstanceStatusOk(
           {
             client,
             maxWaitTime: 1000,
@@ -223,13 +219,13 @@ export const terminateServer = async (instanceID: string): Promise<void> => {
           AllocationId: allocationID,
         });
 
-        return await client.send(releaseIPCommand);
+        return client.send(releaseIPCommand);
       })
       .then(async () => {
         const terminateCommand = new TerminateInstancesCommand({
           InstanceIds: [instanceID],
         });
-        return await client.send(terminateCommand);
+        return client.send(terminateCommand);
       })
       .then(() => {
         resolve();

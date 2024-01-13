@@ -4,7 +4,7 @@ import {
   stopServer,
   terminateServer,
   rebootServer,
-} from "../src/index";
+} from "../src/index.js";
 const SECONDS = 10000;
 jest.setTimeout(1000 * SECONDS);
 
