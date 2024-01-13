@@ -1,19 +1,19 @@
-// import {createServer,startServer,stopServer,terminateServer,rebootServer} from '../src';
+import {
+  createServer,
+  startServer,
+  stopServer,
+  terminateServer,
+  rebootServer,
+} from "../src/index";
+const SECONDS = 10000;
+jest.setTimeout(1000 * SECONDS);
 
-// async function main() {
-//     // const x= await createServer(1);
-//     // console.log(x);
-//     // await stopServer("i-00a1e8b0883f771c9");
-//     // await startServer("i-00a1e8b0883f771c9");
-//     // await rebootServer("i-00a1e8b0883f771c9")
-    
-//     await terminateServer("i-00a1e8b0883f771c9");
-//     console.log("Done.")
-// }
-
-// main();
-
-import { stopServer } from '../src/index';
-
-stopServer("i-055436dd2e0938fcc")
-.catch((error)=> console.log(error)); // May reject if the user has not followed AWS authentication
+test("All operations on smallest server", async () => {
+  const x = await createServer(1);
+  expect(x.id).toMatch(/i-[a-zA-Z0-9]{17}/);
+  expect(x.ip).toMatch(/^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/);
+  await rebootServer(x.id);
+  await stopServer(x.id);
+  await startServer(x.id);
+  await terminateServer(x.id);
+});

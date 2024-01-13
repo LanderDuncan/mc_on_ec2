@@ -1,16 +1,35 @@
-import { EC2Client, RunInstancesCommand, _InstanceType, AllocateAddressCommand, AssociateAddressCommand, waitUntilInstanceStatusOk, StopInstancesCommand, StartInstancesCommand, TerminateInstancesCommand, CreateSecurityGroupCommand, AuthorizeSecurityGroupIngressCommand, ReleaseAddressCommand, DescribeAddressesCommand, RebootInstancesCommand } from "@aws-sdk/client-ec2";
+import {
+  EC2Client,
+  RunInstancesCommand,
+  type _InstanceType,
+  AllocateAddressCommand,
+  AssociateAddressCommand,
+  waitUntilInstanceStatusOk,
+  StopInstancesCommand,
+  StartInstancesCommand,
+  TerminateInstancesCommand,
+  CreateSecurityGroupCommand,
+  AuthorizeSecurityGroupIngressCommand,
+  ReleaseAddressCommand,
+  DescribeAddressesCommand,
+  RebootInstancesCommand,
+  waitUntilInstanceStopped,
+} from "@aws-sdk/client-ec2";
+import { type server } from "./interfaces/index.interfaces";
+import dotenv from "dotenv";
 const REGION = "us-west-2";
 const client = new EC2Client({ region: REGION });
 
-import { server } from './interfaces/index.interfaces';
+// TODO: remove
+dotenv.config();
 
-import dotenv from 'dotenv' // TODO: remove
-dotenv.config()
-
-
-// Create server function
+/**
+ * Function to launch an EC2 instance that is running a Minecraft server. It can be accessed through the returned IP address.
+ *
+ * @param playerCount represents the size of the server. Must be at least one.
+ * @returns A Promise that resolves to a result conforming to the server interface. The promise will be rejected if an AWS call fails.
+ */
 export const createServer = async (playerCount: number): Promise<server> => {
-
   if (playerCount < 1) {
     throw new RangeError("Player count must be at least 1.");
   }
@@ -21,7 +40,6 @@ export const createServer = async (playerCount: number): Promise<server> => {
   let sgroupID: string;
 
   const serverPromise = new Promise<server>((resolve, reject) => {
-
     if (playerCount < 10) {
       InstanceType = "c6i.large";
     } else if (playerCount < 20) {
@@ -34,145 +52,191 @@ export const createServer = async (playerCount: number): Promise<server> => {
       GroupName: "Minecraft",
       Description: "SG that alligns with MC server network policies.",
     });
-    client.send(createSecurityGroupCommand).then((result) => {
-      sgroupID = result.GroupId || '';
-      const ingressCommand = new AuthorizeSecurityGroupIngressCommand({
-        GroupId: sgroupID,
-        IpPermissions: [
-          {
-            IpProtocol: "tcp",
-            FromPort: 25565,
-            ToPort: 25565,
-            IpRanges: [{ CidrIp: "0.0.0.0/0" }],
-          },
-        ],
-      });
-      return client.send(ingressCommand);
-    })
-      .catch(() => { return; })
-      .then(() => {
+    client
+      .send(createSecurityGroupCommand)
+      .then(async (result) => {
+        sgroupID = result.GroupId ?? "";
+        const ingressCommand = new AuthorizeSecurityGroupIngressCommand({
+          GroupId: sgroupID,
+          IpPermissions: [
+            {
+              IpProtocol: "tcp",
+              FromPort: 25565,
+              ToPort: 25565,
+              IpRanges: [{ CidrIp: "0.0.0.0/0" }],
+            },
+          ],
+        });
+        return await client.send(ingressCommand);
+      })
+      .catch(() => {})
+      .then(async () => {
         const createCommand = new RunInstancesCommand({
           SecurityGroups: ["Minecraft"],
           ImageId: "ami-0ae49954dfb447966",
           InstanceType,
           MinCount: 1,
           MaxCount: 1,
-          UserData: "IyEvYmluL2Jhc2gKc3VkbyB5dW0gaW5zdGFsbCBqYXZhLTE3LWFtYXpvbi1jb3JyZXR0by1oZWFkbGVzcyAteQp3Z2V0IGh0dHBzOi8vcGlzdG9uLWRhdGEubW9qYW5nLmNvbS92MS9vYmplY3RzLzhkZDFhMjgwMTVmNTFiMTgwMzIxMzg5MmI1MGI3YjRmYzc2ZTU5NGQvc2VydmVyLmphcgpqYXZhIC1YbXgxMDI0TSAtWG1zMTAyNE0gLWphciBzZXJ2ZXIuamFyIG5vZ3VpCnNlZCAnMyBjXCBldWxhPXRydWUnIGV1bGEudHh0IC1pCmVjaG8gLWUgJyMhL2Jpbi9iYXNoXG5qYXZhIC1YbXgxMDI0TSAtWG1zMTAyNE0gLWphciBzZXJ2ZXIuamFyIG5vZ3VpJyB8IHN1ZG8gdGVlIC9ldGMvcmMuZC9yYy5sb2NhbCA+IC9kZXYvbnVsbApzdWRvIGNobW9kICt4IC9ldGMvcmMuZC9yYy5sb2NhbApqYXZhIC1YbXgxMDI0TSAtWG1zMTAyNE0gLWphciBzZXJ2ZXIuamFyIG5vZ3Vp"
+          UserData:
+            "IyEvYmluL2Jhc2gKc3VkbyB5dW0gaW5zdGFsbCBqYXZhLTE3LWFtYXpvbi1jb3JyZXR0by1oZWFkbGVzcyAteQp3Z2V0IGh0dHBzOi8vcGlzdG9uLWRhdGEubW9qYW5nLmNvbS92MS9vYmplY3RzLzhkZDFhMjgwMTVmNTFiMTgwMzIxMzg5MmI1MGI3YjRmYzc2ZTU5NGQvc2VydmVyLmphcgpqYXZhIC1YbXgxMDI0TSAtWG1zMTAyNE0gLWphciBzZXJ2ZXIuamFyIG5vZ3VpCnNlZCAnMyBjXCBldWxhPXRydWUnIGV1bGEudHh0IC1pCmVjaG8gLWUgJyMhL2Jpbi9iYXNoXG5qYXZhIC1YbXgxMDI0TSAtWG1zMTAyNE0gLWphciBzZXJ2ZXIuamFyIG5vZ3VpJyB8IHN1ZG8gdGVlIC9ldGMvcmMuZC9yYy5sb2NhbCA+IC9kZXYvbnVsbApzdWRvIGNobW9kICt4IC9ldGMvcmMuZC9yYy5sb2NhbApqYXZhIC1YbXgxMDI0TSAtWG1zMTAyNE0gLWphciBzZXJ2ZXIuamFyIG5vZ3Vp",
         });
-        return client.send(createCommand);
+        return await client.send(createCommand);
       })
-      .then((result) => {
-        instanceID = result.Instances?.[0]?.InstanceId || ''
-        return waitUntilInstanceStatusOk(
+      .then(async (result) => {
+        instanceID = result.Instances?.[0]?.InstanceId ?? "";
+        return await waitUntilInstanceStatusOk(
           {
-            client: client,
-            maxWaitTime: 1000
+            client,
+            maxWaitTime: 1000,
           },
-          { InstanceIds: [instanceID] },
+          { InstanceIds: [instanceID] }
         );
       })
-      .then(() => {
+      .then(async () => {
         const allocateCommand = new AllocateAddressCommand({});
-        return client.send(allocateCommand);
+        return await client.send(allocateCommand);
       })
-      .then((result) => {
+      .then(async (result) => {
         const associateCommand = new AssociateAddressCommand({
-          AllocationId: result.AllocationId || '',
+          AllocationId: result.AllocationId ?? "",
           InstanceId: instanceID,
         });
-        instanceIP = result.PublicIp || '';
-        return client.send(associateCommand);
+        instanceIP = result.PublicIp ?? "";
+        return await client.send(associateCommand);
       })
       .then(() => {
-        resolve({ id: instanceID, ip: instanceIP })
+        resolve({ id: instanceID, ip: instanceIP });
       })
-      .catch((err) => reject(err));
+      .catch((err) => {
+        reject(err);
+      });
   });
-  return serverPromise;
+  return await serverPromise;
 };
 
-
-export const stopServer = async (instanceId: string): Promise<void> => {
+/**
+ * Function to stop a specified EC2 instance
+ *
+ * @param instanceID string representing a valid AWS EC2 instance.
+ */
+export const stopServer = async (instanceID: string): Promise<void> => {
   const serverPromise = new Promise<void>((resolve, reject) => {
     const stopCommand = new StopInstancesCommand({
-      InstanceIds: [instanceId],
+      InstanceIds: [instanceID],
     });
-    client.send(stopCommand)
-      .then(() => resolve())
-      .catch((err) => reject(err));
-  });
-  return serverPromise;
-}
-
-
-export const startServer = (instanceId: string): Promise<void> => {
-  const serverPromise = new Promise<void>((resolve, reject) => {
-    const startCommand = new StartInstancesCommand({
-      InstanceIds: [instanceId],
-    });
-    client.send(startCommand)
-      .then(() => {
-        return waitUntilInstanceStatusOk(
+    client
+      .send(stopCommand)
+      .then(async () => {
+        return await waitUntilInstanceStopped(
           {
-            client: client,
-            maxWaitTime: 1000
+            client,
+            maxWaitTime: 1000,
           },
-          { InstanceIds: [instanceId] },
+          { InstanceIds: [instanceID] }
         );
       })
-      .then(() => resolve())
-      .catch((err) => reject(err));
+      .then(() => {
+        resolve();
+      })
+      .catch((err) => {
+        reject(err);
+      });
   });
-  return serverPromise;
-}
+  await serverPromise;
+};
 
+/**
+ * Function to start a specified EC2 instance that is in the stopped state.
+ *
+ * @param instanceID string representing a valid AWS EC2 instance.
+ */
+export const startServer = async (instanceID: string): Promise<void> => {
+  const serverPromise = new Promise<void>((resolve, reject) => {
+    const startCommand = new StartInstancesCommand({
+      InstanceIds: [instanceID],
+    });
+    client
+      .send(startCommand)
+      .then(async () => {
+        return await waitUntilInstanceStatusOk(
+          {
+            client,
+            maxWaitTime: 1000,
+          },
+          { InstanceIds: [instanceID] }
+        );
+      })
+      .then(() => {
+        resolve();
+      })
+      .catch((err) => {
+        reject(err);
+      });
+  });
+  await serverPromise;
+};
 
-export const rebootServer = async (instanceId: string): Promise<void> => {
-
+/**
+ * Function to reboot an EC2 instance to resolve issues with the underlying operating system or server functionality.
+ *
+ * @param instanceID string representing a valid AWS EC2 instance.
+ */
+export const rebootServer = async (instanceID: string): Promise<void> => {
   const serverPromise = new Promise<void>((resolve, reject) => {
     const rebootCommand = new RebootInstancesCommand({
-      InstanceIds: [instanceId],
+      InstanceIds: [instanceID],
     });
 
-    client.send(rebootCommand)
-      .then(() => resolve())
-      .catch((err) => reject(err));
+    client
+      .send(rebootCommand)
+      .then(() => {
+        resolve();
+      })
+      .catch((err) => {
+        reject(err);
+      });
+  });
 
-  })
+  await serverPromise;
+};
 
-  return serverPromise;
-}
-
-
-export const terminateServer = async (instanceId: string) => {
+/**
+ * Function to terminate the selected EC2 instance and release its associated elastic IP address.
+ *
+ * @param instanceID string representing a valid AWS EC2 instance.
+ */
+export const terminateServer = async (instanceID: string): Promise<void> => {
   const serverPromise = new Promise<void>((resolve, reject) => {
-
-    let allocationID = '';
+    let allocationID = "";
     const DescAddressesCommand = new DescribeAddressesCommand({});
 
-    // Get the allocation ID
-    client.send(DescAddressesCommand)
-      .then((result) => {
+    client
+      .send(DescAddressesCommand)
+      .then(async (result) => {
         result.Addresses?.forEach((ele) => {
-          if (ele.InstanceId == instanceId) {
-            allocationID = ele.AllocationId || '';
+          if (ele.InstanceId === instanceID) {
+            allocationID = ele.AllocationId ?? "";
           }
-        })
-        // Release elastic IP
+        });
+
         const releaseIPCommand = new ReleaseAddressCommand({
           AllocationId: allocationID,
         });
 
-        return client.send(releaseIPCommand);
+        return await client.send(releaseIPCommand);
+      })
+      .then(async () => {
+        const terminateCommand = new TerminateInstancesCommand({
+          InstanceIds: [instanceID],
+        });
+        return await client.send(terminateCommand);
       })
       .then(() => {
-        // Terminate Instance
-        const terminateCommand = new TerminateInstancesCommand({
-          InstanceIds: [instanceId],
-        });
-        return client.send(terminateCommand);
+        resolve();
       })
-      .then(() => resolve()).catch((err) => reject(err))
-  })
-  return serverPromise;
+      .catch((err) => {
+        reject(err);
+      });
+  });
+  await serverPromise;
 };
